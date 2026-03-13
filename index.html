@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Six Seven Tracker</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, sans-serif;
+            background: #111;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            gap: 24px;
+        }
+
+        #angle-display {
+            font-size: 96px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -2px;
+        }
+
+        #emoji {
+            font-size: 64px;
+        }
+
+        #bar-container {
+            width: 280px;
+            height: 12px;
+            background: #333;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        #bar {
+            height: 100%;
+            width: 0%;
+            background: #555;
+            border-radius: 6px;
+            transition: width 0.1s, background 0.2s;
+        }
+
+        #bar.near { background: #f0a500; }
+        #bar.hit  { background: #00e676; }
+
+        #label {
+            font-size: 14px;
+            color: #888;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        #status {
+            font-size: 13px;
+            color: #555;
+        }
+
+        #permission-btn {
+            padding: 12px 28px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            background: #f0a500;
+            color: #000;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        #permission-btn:hover { background: #ffc107; }
+
+        #clap-container {
+            display: none;
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            justify-content: center;
+            align-items: center;
+            gap: 0px;
+        }
+        #clap-container.active { display: flex; }
+
+        .hand {
+            font-size: 100px;
+            animation: clap 0.4s ease-in-out infinite alternate;
+        }
+        .hand-right {
+            transform: scaleX(-1);
+            animation-delay: 0s;
+        }
+        .hand-left {
+            animation-delay: 0s;
+        }
+
+        @keyframes clap {
+            from { transform: translateX(40px); }
+            to   { transform: translateX(-40px); }
+        }
+        .hand-right {
+            animation-name: clap-right;
+        }
+        @keyframes clap-right {
+            from { transform: scaleX(-1) translateX(40px); }
+            to   { transform: scaleX(-1) translateX(-40px); }
+        }
+    </style>
+</head>
+<body>
+    <div id="clap-container">
+        <span class="hand hand-left">🤚</span>
+        <span class="hand hand-right">🤚</span>
+    </div>
+    <div id="angle-display">--.-°</div>
+    <div id="bar-container"><div id="bar"></div></div>
+    <div id="label">tilt your device</div>
+    <div id="status">waiting for sensor...</div>
+    <button id="permission-btn" style="display:none">Enable Motion Sensor</button>
+    <div id="debug" style="font-size:11px;color:#444;text-align:center;line-height:1.8;"></div>
+
+    <script>
+        const angleDisplay = document.getElementById('angle-display');
+        const clapContainer = document.getElementById('clap-container');
+        const bar = document.getElementById('bar');
+        const statusEl = document.getElementById('status');
+        const permBtn = document.getElementById('permission-btn');
+
+        let lastSpoken = 0;
+        let wasAt67 = false;
+        const synth = window.speechSynthesis;
+
+        function speak67() {
+            const now = Date.now();
+            if (now - lastSpoken < 2000) return;
+            lastSpoken = now;
+
+            const utt = new SpeechSynthesisUtterance('six seven');
+            utt.lang = 'en-US';
+            utt.rate = 0.7;
+            utt.pitch = 1.1;
+            synth.speak(utt);
+        }
+
+        function onOrientation(e) {
+
+            console.log(e);
+            // beta = front-back tilt (-180 to 180), 0 = flat, 90 = upright
+            const raw = e.beta;
+            if (raw === null) return;
+
+            const angle = Math.abs(raw);
+            const clamped = Math.min(angle, 90);
+
+            angleDisplay.textContent = angle.toFixed(1) + '°';
+
+            const diff = Math.abs(angle - 67);
+            const isAt67 = angle >= 67.0 && angle < 68.0;
+            const isNear = diff < 5;
+
+            // bar fill: 0° = 0%, 90° = 100%
+            bar.style.width = (clamped / 90 * 100) + '%';
+            bar.className = isAt67 ? 'hit' : isNear ? 'near' : '';
+
+            clapContainer.classList.toggle('active', isAt67);
+            statusEl.textContent = isAt67
+                ? '67°!'
+                : `${diff.toFixed(1)}° away from 67`;
+
+            if (isAt67 && !wasAt67) speak67();
+            wasAt67 = isAt67;
+        }
+
+        function startListening() {
+            if (typeof DeviceOrientationEvent === 'undefined') {
+                statusEl.textContent = 'DeviceOrientation not supported on this device.';
+                return;
+            }
+            window.addEventListener('deviceorientation', onOrientation);
+            statusEl.textContent = 'sensor active';
+        }
+
+        // iOS 13+ requires explicit permission
+        if (typeof DeviceOrientationEvent !== 'undefined' &&
+            typeof DeviceOrientationEvent.requestPermission === 'function') {
+            permBtn.style.display = 'block';
+            permBtn.addEventListener('click', () => {
+                DeviceOrientationEvent.requestPermission().then(state => {
+                    if (state === 'granted') {
+                        permBtn.style.display = 'none';
+                        startListening();
+                    } else {
+                        statusEl.textContent = 'Permission denied.';
+                    }
+                });
+            });
+        } else {
+            startListening();
+        }
+    </script>
+</body>
+</html>
