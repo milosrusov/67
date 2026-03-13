@@ -75,50 +75,55 @@
 
         #clap-container {
             display: none;
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
             justify-content: center;
-            align-items: center;
-            gap: 0px;
+            align-items: flex-end;
+            gap: 32px;
         }
         #clap-container.active { display: flex; }
 
-        .hand {
-            font-size: 100px;
-            animation: clap 0.4s ease-in-out infinite alternate;
+        .hand-left {
+            font-size: 80px;
+            display: inline-block;
+            animation: hand-up-down 0.4s ease-in-out infinite alternate;
         }
         .hand-right {
+            font-size: 80px;
+            display: inline-block;
             transform: scaleX(-1);
-            animation-delay: 0s;
-        }
-        .hand-left {
-            animation-delay: 0s;
+            animation: hand-up-down 0.4s ease-in-out infinite alternate-reverse;
         }
 
-        @keyframes clap {
-            from { transform: translateX(40px); }
-            to   { transform: translateX(-40px); }
+        @keyframes hand-up-down {
+            from { transform: translateY(0px); }
+            to   { transform: translateY(-30px); }
         }
         .hand-right {
-            animation-name: clap-right;
+            animation-name: hand-up-down-mirror;
         }
-        @keyframes clap-right {
-            from { transform: scaleX(-1) translateX(40px); }
-            to   { transform: scaleX(-1) translateX(-40px); }
+        @keyframes hand-up-down-mirror {
+            from { transform: scaleX(-1) translateY(0px); }
+            to   { transform: scaleX(-1) translateY(-30px); }
         }
     </style>
 </head>
 <body>
-    <div id="clap-container">
-        <span class="hand hand-left">🤚</span>
-        <span class="hand hand-right">🤚</span>
+    <div id="start-screen" style="display:flex;flex-direction:column;align-items:center;gap:20px;">
+        <div style="font-size:48px">📐</div>
+        <div style="font-size:22px;font-weight:700;">Six Seven Tracker</div>
+        <div style="font-size:15px;color:#888;text-align:center;line-height:1.6;max-width:260px;">Tilt your phone</div>
+        <button id="start-btn" style="padding:14px 32px;font-size:18px;border:none;border-radius:10px;background:#f0a500;color:#000;cursor:pointer;font-weight:700;">Start</button>
     </div>
-    <div id="angle-display">--.-°</div>
-    <div id="bar-container"><div id="bar"></div></div>
-    <div id="label">tilt your device</div>
-    <div id="status">waiting for sensor...</div>
-    <button id="permission-btn" style="display:none">Enable Motion Sensor</button>
+
+    <div id="main-screen" style="display:none;flex-direction:column;align-items:center;gap:24px;">
+        <div id="angle-display">--.-°</div>
+        <div id="clap-container">
+            <span class="hand hand-left">🫴</span>
+            <span class="hand hand-right">🫴</span>
+        </div>
+        <div id="bar-container"><div id="bar"></div></div>
+        <div id="label">tilt your device</div>
+        <div id="status">sensor active</div>
+    </div>
     <div id="debug" style="font-size:11px;color:#444;text-align:center;line-height:1.8;"></div>
 
     <script>
@@ -126,7 +131,9 @@
         const clapContainer = document.getElementById('clap-container');
         const bar = document.getElementById('bar');
         const statusEl = document.getElementById('status');
-        const permBtn = document.getElementById('permission-btn');
+        const startBtn = document.getElementById('start-btn');
+        const startScreen = document.getElementById('start-screen');
+        const mainScreen = document.getElementById('main-screen');
 
         let lastSpoken = 0;
         let wasAt67 = false;
@@ -137,6 +144,8 @@
             if (now - lastSpoken < 2000) return;
             lastSpoken = now;
 
+            // cancel anything pending so it fires immediately
+            synth.cancel();
             const utt = new SpeechSynthesisUtterance('six seven');
             utt.lang = 'en-US';
             utt.rate = 0.7;
@@ -145,9 +154,6 @@
         }
 
         function onOrientation(e) {
-
-            console.log(e);
-            // beta = front-back tilt (-180 to 180), 0 = flat, 90 = upright
             const raw = e.beta;
             if (raw === null) return;
 
@@ -160,7 +166,6 @@
             const isAt67 = angle >= 67.0 && angle < 68.0;
             const isNear = diff < 5;
 
-            // bar fill: 0° = 0%, 90° = 100%
             bar.style.width = (clamped / 90 * 100) + '%';
             bar.className = isAt67 ? 'hit' : isNear ? 'near' : '';
 
@@ -174,31 +179,33 @@
         }
 
         function startListening() {
-            if (typeof DeviceOrientationEvent === 'undefined') {
-                statusEl.textContent = 'DeviceOrientation not supported on this device.';
-                return;
-            }
             window.addEventListener('deviceorientation', onOrientation);
-            statusEl.textContent = 'sensor active';
         }
 
-        // iOS 13+ requires explicit permission
-        if (typeof DeviceOrientationEvent !== 'undefined' &&
-            typeof DeviceOrientationEvent.requestPermission === 'function') {
-            permBtn.style.display = 'block';
-            permBtn.addEventListener('click', () => {
+        function launch() {
+            // warm up speech synthesis with silent utterance — unlocks audio context
+            const warmup = new SpeechSynthesisUtterance('');
+            synth.speak(warmup);
+
+            startScreen.style.display = 'none';
+            mainScreen.style.display = 'flex';
+
+            if (typeof DeviceOrientationEvent !== 'undefined' &&
+                typeof DeviceOrientationEvent.requestPermission === 'function') {
+                // iOS 13+
                 DeviceOrientationEvent.requestPermission().then(state => {
                     if (state === 'granted') {
-                        permBtn.style.display = 'none';
                         startListening();
                     } else {
                         statusEl.textContent = 'Permission denied.';
                     }
                 });
-            });
-        } else {
-            startListening();
+            } else {
+                startListening();
+            }
         }
+
+        startBtn.addEventListener('click', launch);
     </script>
 </body>
 </html>
