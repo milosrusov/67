@@ -108,9 +108,7 @@
 </head>
 <body>
     <div id="start-screen" style="display:flex;flex-direction:column;align-items:center;gap:20px;">
-        <div style="font-size:48px">📐</div>
         <div style="font-size:22px;font-weight:700;">Six Seven Tracker</div>
-        <div style="font-size:15px;color:#888;text-align:center;line-height:1.6;max-width:260px;">Tilt your phone</div>
         <button id="start-btn" style="padding:14px 32px;font-size:18px;border:none;border-radius:10px;background:#f0a500;color:#000;cursor:pointer;font-weight:700;">Start</button>
     </div>
 
@@ -121,8 +119,7 @@
         </div>
         <div id="angle-display">--.-°</div>
         <div id="bar-container"><div id="bar"></div></div>
-        <div id="label">tilt your device</div>
-        <div id="status">sensor active</div>
+        <div id="status">Tilt your phone</div>
     </div>
     <div id="debug" style="font-size:11px;color:#444;text-align:center;line-height:1.8;"></div>
 
@@ -160,7 +157,7 @@
             const angle = Math.abs(raw);
             const clamped = Math.min(angle, 90);
 
-            angleDisplay.textContent = angle.toFixed(1) + '°';
+            angleDisplay.textContent = Math.floor(angle) + '°';
 
             const diff = Math.abs(angle - 67);
             const isAt67 = angle >= 67.0 && angle < 68.0;
@@ -172,7 +169,7 @@
             clapContainer.classList.toggle('active', isAt67);
             statusEl.textContent = isAt67
                 ? '67°!'
-                : `${diff.toFixed(1)}° away from 67`;
+                : 'Tilt your phone';
 
             if (isAt67 && !wasAt67) speak67();
             wasAt67 = isAt67;
