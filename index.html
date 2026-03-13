@@ -132,17 +132,10 @@
         const startScreen = document.getElementById('start-screen');
         const mainScreen = document.getElementById('main-screen');
 
-        let lastSpoken = 0;
         let wasAt67 = false;
         const synth = window.speechSynthesis;
 
         function speak67() {
-            const now = Date.now();
-            if (now - lastSpoken < 2000) return;
-            lastSpoken = now;
-
-            // cancel anything pending so it fires immediately
-            synth.cancel();
             const utt = new SpeechSynthesisUtterance('six seven');
             utt.lang = 'en-US';
             utt.rate = 0.7;
