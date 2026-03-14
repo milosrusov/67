@@ -74,12 +74,14 @@
         #permission-btn:hover { background: #ffc107; }
 
         #clap-container {
-            display: none;
+            visibility: hidden;
+            display: flex;
             justify-content: center;
             align-items: flex-end;
             gap: 32px;
+            height: 100px;
         }
-        #clap-container.active { display: flex; }
+        #clap-container.active { visibility: visible; }
 
         .hand-left {
             font-size: 80px;
@@ -136,11 +138,16 @@
         const synth = window.speechSynthesis;
 
         function speak67() {
+            synth.cancel();
             const utt = new SpeechSynthesisUtterance('six seven');
             utt.lang = 'en-US';
             utt.rate = 0.7;
             utt.pitch = 1.1;
             synth.speak(utt);
+        }
+
+        function stopSpeech() {
+            synth.cancel();
         }
 
         function onOrientation(e) {
@@ -165,6 +172,7 @@
                 : 'Tilt your phone';
 
             if (isAt67 && !wasAt67) speak67();
+            if (!isAt67 && wasAt67) stopSpeech();
             wasAt67 = isAt67;
         }
 
@@ -196,6 +204,16 @@
         }
 
         startBtn.addEventListener('click', launch);
+
+        // Detect Instagram/Facebook in-app browser
+        const ua = navigator.userAgent || '';
+        const isInAppBrowser = /Instagram|FBAN|FBAV/.test(ua);
+        if (isInAppBrowser) {
+            const banner = document.createElement('div');
+            banner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#f0a500;color:#000;text-align:center;padding:14px 16px;font-size:14px;font-weight:700;z-index:999;line-height:1.5;';
+            banner.innerHTML = 'Open in Chrome for this to work<br><span style="font-weight:400;font-size:12px;">Tap ··· → Open in browser</span>';
+            document.body.prepend(banner);
+        }
     </script>
 </body>
 </html>
